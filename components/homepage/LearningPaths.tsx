@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import { motion } from "framer-motion";
 
 const courses = [
@@ -11,9 +12,10 @@ const courses = [
     subtitle: "Learn the code ManoBot needs.",
     description:
       "Short, story-led lessons introduce variables, decisions, loops and functions through ManoCity challenges.",
-    image: "/courses/python-essentials.png",
+    image: "/python essentials.png",
     badge: "Beginner",
     cta: "Start Python",
+    href: "/learning",
   },
   {
     number: "02",
@@ -22,9 +24,10 @@ const courses = [
     subtitle: "Turn code into movement.",
     description:
       "Learn how ManoBot uses motors, sensors and the Pico W to move, detect lines and respond to the physical world.",
-    image: "/courses/manobot-robotics.png",
+    image: "/manobot robotics.png",
     badge: "Hands-on",
     cta: "Explore ManoBot",
+    href: "/learning",
   },
   {
     number: "03",
@@ -33,9 +36,10 @@ const courses = [
     subtitle: "Code real journeys across the city.",
     description:
       "Guide ManoBot through roads, junctions, traffic signals and destinations while solving progressively harder missions.",
-    image: "/courses/manocity-missions.png",
+    image: "/manocity missions.png",
     badge: "Challenge",
-    cta: "Start Missions",
+    cta: "Explore Missions",
+    href: "/learning",
   },
 ];
 
@@ -43,9 +47,19 @@ export default function LearningPaths() {
   return (
     <section
       id="learning"
-      className="relative overflow-hidden bg-[#F8FBFE] px-6 py-28 md:px-12 md:py-36"
+      className="
+        relative
+        overflow-hidden
+        bg-[#F8FBFE]
+        px-6
+        py-28
+        md:px-12
+        md:py-36
+      "
     >
-      {/* BACKGROUND DETAILS */}
+      {/* =====================================================
+          BACKGROUND
+          ===================================================== */}
 
       <div
         className="
@@ -65,8 +79,8 @@ export default function LearningPaths() {
         className="
           pointer-events-none
           absolute
-          right-[10%]
           bottom-[10%]
+          right-[10%]
           h-[420px]
           w-[420px]
           rounded-full
@@ -144,6 +158,36 @@ export default function LearningPaths() {
             learn Python, control ManoBot and then apply those skills
             in the physical city.
           </p>
+
+          {/* LEARNING HUB LINK */}
+
+          <Link
+            href="/learning"
+            className="
+              mt-8
+              inline-flex
+              items-center
+              gap-2
+              rounded-full
+              border
+              border-[#168BE8]/15
+              bg-white
+              px-6
+              py-3
+              text-sm
+              font-bold
+              text-[#168BE8]
+              shadow-sm
+              transition
+              duration-300
+              hover:-translate-y-0.5
+              hover:border-[#168BE8]
+              hover:shadow-md
+            "
+          >
+            Explore Learning Resources
+            <span>→</span>
+          </Link>
         </motion.div>
 
         {/* =====================================================
@@ -160,6 +204,8 @@ export default function LearningPaths() {
             lg:block
           "
         >
+          {/* LIGHT BACKGROUND LINE */}
+
           <div
             className="
               absolute
@@ -171,6 +217,8 @@ export default function LearningPaths() {
               bg-[#168BE8]/10
             "
           />
+
+          {/* ANIMATED BLUE LINE */}
 
           <motion.div
             initial={{
@@ -240,7 +288,7 @@ export default function LearningPaths() {
                 ease: [0.22, 1, 0.36, 1],
               }}
               whileHover={{
-                y: -8,
+                y: -10,
               }}
               className="
                 group
@@ -250,115 +298,168 @@ export default function LearningPaths() {
                 border
                 border-[#168BE8]/10
                 bg-white
-                shadow-[0_20px_60px_rgba(11,31,58,0.07)]
-                transition
+                shadow-[0_20px_60px_rgba(11,31,58,0.10)]
+                transition-shadow
                 duration-300
+                hover:shadow-[0_30px_80px_rgba(11,31,58,0.18)]
               "
             >
-              {/* COURSE NUMBER */}
+              {/* =================================================
+                  COURSE THUMBNAIL
+                  ================================================= */}
 
-              <div
-                className="
-                  absolute
-                  left-5
-                  top-5
-                  z-20
-                  flex
-                  h-10
-                  w-10
-                  items-center
-                  justify-center
-                  rounded-full
-                  border
-                  border-white/50
-                  bg-white/90
-                  text-xs
-                  font-extrabold
-                  text-[#168BE8]
-                  shadow-sm
-                  backdrop-blur-md
-                "
-              >
-                {course.number}
-              </div>
-
-              {/* BADGE */}
-
-              <div
-                className="
-                  absolute
-                  right-5
-                  top-5
-                  z-20
-                  rounded-full
-                  border
-                  border-white/50
-                  bg-white/90
-                  px-3
-                  py-1.5
-                  text-[10px]
-                  font-bold
-                  uppercase
-                  tracking-[0.15em]
-                  text-[#0B1F3A]
-                  shadow-sm
-                  backdrop-blur-md
-                "
-              >
-                {course.badge}
-              </div>
-
-              {/* IMAGE AREA */}
-
-              <div
+              <Link
+                href={course.href}
                 className="
                   relative
-                  flex
-                  h-[270px]
-                  items-center
-                  justify-center
+                  block
+                  h-[285px]
+                  w-full
                   overflow-hidden
-                  bg-gradient-to-br
-                  from-[#F4FAFF]
-                  via-white
-                  to-[#EAF7FF]
-                  p-6
                 "
               >
+                {/* IMAGE */}
+
                 <motion.div
                   whileHover={{
-                    scale: 1.06,
+                    scale: 1.055,
                   }}
                   transition={{
-                    duration: 0.35,
+                    duration: 0.5,
+                    ease: [0.22, 1, 0.36, 1],
                   }}
-                  className="
-                    flex
-                    h-full
-                    w-full
-                    items-center
-                    justify-center
-                  "
+                  className="absolute inset-0"
                 >
                   <Image
                     src={course.image}
                     alt={course.title}
-                    width={500}
-                    height={340}
+                    fill
                     unoptimized
                     className="
-                      max-h-[230px]
-                      w-auto
-                      object-contain
-                      drop-shadow-[0_20px_35px_rgba(11,31,58,0.12)]
+                      object-cover
+                      object-center
                     "
                   />
                 </motion.div>
-              </div>
 
-              {/* CONTENT */}
+                {/* IMAGE OVERLAY */}
+
+                <div
+                  className="
+                    pointer-events-none
+                    absolute
+                    inset-0
+                    z-10
+                    bg-gradient-to-b
+                    from-[#061A2E]/55
+                    via-[#061A2E]/5
+                    to-[#061A2E]/65
+                  "
+                />
+
+                {/* SUBTLE BLUE OVERLAY */}
+
+                <div
+                  className="
+                    pointer-events-none
+                    absolute
+                    inset-0
+                    z-10
+                    bg-[#168BE8]/5
+                  "
+                />
+
+                {/* NUMBER + LEVEL */}
+
+                <div
+                  className="
+                    absolute
+                    left-6
+                    right-6
+                    top-5
+                    z-20
+                    flex
+                    items-start
+                    justify-between
+                  "
+                >
+                  <span
+                    className="
+                      block
+                      text-[44px]
+                      font-black
+                      leading-none
+                      tracking-[-0.05em]
+                      text-white
+                    "
+                    style={{
+                      textShadow:
+                        "0 4px 14px rgba(0,0,0,0.55), 0 1px 3px rgba(0,0,0,0.8)",
+                    }}
+                  >
+                    {course.number}
+                  </span>
+
+                  <div
+                    className="
+                      rounded-full
+                      border
+                      border-white/30
+                      bg-[#071B30]/65
+                      px-4
+                      py-2
+                      text-[11px]
+                      font-extrabold
+                      uppercase
+                      tracking-[0.18em]
+                      text-white
+                      shadow-[0_6px_18px_rgba(0,0,0,0.30)]
+                      backdrop-blur-md
+                    "
+                    style={{
+                      textShadow:
+                        "0 2px 5px rgba(0,0,0,0.55)",
+                    }}
+                  >
+                    {course.badge}
+                  </div>
+                </div>
+
+                {/* IMAGE BOTTOM LABEL */}
+
+                <div
+                  className="
+                    absolute
+                    bottom-5
+                    left-6
+                    z-20
+                  "
+                >
+                  <p
+                    className="
+                      text-[11px]
+                      font-bold
+                      uppercase
+                      tracking-[0.22em]
+                      text-white/85
+                    "
+                    style={{
+                      textShadow:
+                        "0 2px 8px rgba(0,0,0,0.7)",
+                    }}
+                  >
+                    Learning Path {course.number}
+                  </p>
+                </div>
+              </Link>
+
+              {/* =================================================
+                  CARD CONTENT
+                  ================================================= */}
 
               <div className="p-7">
+
+                {/* EYEBROW */}
 
                 <p
                   className="
@@ -372,17 +473,26 @@ export default function LearningPaths() {
                   {course.eyebrow}
                 </p>
 
-                <h3
-                  className="
-                    mt-3
-                    text-2xl
-                    font-extrabold
-                    tracking-tight
-                    text-[#0B1F3A]
-                  "
-                >
-                  {course.title}
-                </h3>
+                {/* TITLE */}
+
+                <Link href={course.href}>
+                  <h3
+                    className="
+                      mt-3
+                      text-2xl
+                      font-extrabold
+                      tracking-tight
+                      text-[#0B1F3A]
+                      transition
+                      duration-300
+                      hover:text-[#168BE8]
+                    "
+                  >
+                    {course.title}
+                  </h3>
+                </Link>
+
+                {/* SUBTITLE */}
 
                 <p
                   className="
@@ -395,6 +505,8 @@ export default function LearningPaths() {
                   {course.subtitle}
                 </p>
 
+                {/* DESCRIPTION */}
+
                 <p
                   className="
                     mt-4
@@ -406,7 +518,9 @@ export default function LearningPaths() {
                   {course.description}
                 </p>
 
-                {/* PROGRESS INDICATOR */}
+                {/* =================================================
+                    PROGRESS
+                    ================================================= */}
 
                 <div className="mt-6">
                   <div
@@ -423,7 +537,10 @@ export default function LearningPaths() {
                     "
                   >
                     <span>Learning Path</span>
-                    <span>{index + 1} / 3</span>
+
+                    <span>
+                      {index + 1} / {courses.length}
+                    </span>
                   </div>
 
                   <div
@@ -439,7 +556,9 @@ export default function LearningPaths() {
                         width: 0,
                       }}
                       whileInView={{
-                        width: `${((index + 1) / 3) * 100}%`,
+                        width: `${
+                          ((index + 1) / courses.length) * 100
+                        }%`,
                       }}
                       viewport={{
                         once: true,
@@ -452,14 +571,18 @@ export default function LearningPaths() {
                         h-full
                         rounded-full
                         bg-[#168BE8]
+                        shadow-[0_2px_8px_rgba(22,139,232,0.35)]
                       "
                     />
                   </div>
                 </div>
 
-                {/* CTA */}
+                {/* =================================================
+                    COURSE BUTTON
+                    ================================================= */}
 
-                <button
+                <Link
+                  href={course.href}
                   className="
                     mt-7
                     inline-flex
@@ -472,24 +595,25 @@ export default function LearningPaths() {
                     text-sm
                     font-bold
                     text-white
+                    shadow-[0_8px_20px_rgba(11,31,58,0.18)]
                     transition
                     duration-300
                     group-hover:bg-[#168BE8]
+                    group-hover:shadow-[0_10px_25px_rgba(22,139,232,0.28)]
                   "
                 >
                   {course.cta}
 
                   <span
                     className="
-                      transition
+                      transition-transform
                       duration-300
                       group-hover:translate-x-1
                     "
                   >
                     →
                   </span>
-                </button>
-
+                </Link>
               </div>
             </motion.article>
           ))}
@@ -568,12 +692,13 @@ export default function LearningPaths() {
                 text-[#5D748A]
               "
             >
-              Every lesson leads to something ManoBot can actually do in
-              ManoCity.
+              Every lesson leads to something ManoBot can actually do
+              in ManoCity.
             </p>
           </div>
 
-          <button
+          <Link
+            href="/learning"
             className="
               shrink-0
               rounded-full
@@ -591,10 +716,9 @@ export default function LearningPaths() {
               hover:text-white
             "
           >
-            View All Learning →
-          </button>
+            Explore Learning Resources →
+          </Link>
         </motion.div>
-
       </div>
     </section>
   );

@@ -1,13 +1,11 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import { useRef } from "react";
 import {
   motion,
-  MotionValue,
-  useScroll,
-  useSpring,
-  useTransform,
+  useInView,
 } from "framer-motion";
 
 /* =========================================================
@@ -21,12 +19,10 @@ const kitItems = [
       "Build and program your own line-following robot.",
     image: "/manobot-route.png",
 
-    // Upper left
     x: -330,
     y: -150,
 
-    start: 0.18,
-    end: 0.34,
+    delay: 0.45,
   },
 
   {
@@ -35,12 +31,10 @@ const kitItems = [
       "A physical city poster with roads, junctions and missions.",
     image: "/map.png",
 
-    // Upper right
     x: 330,
     y: -150,
 
-    start: 0.28,
-    end: 0.44,
+    delay: 0.62,
   },
 
   {
@@ -49,12 +43,10 @@ const kitItems = [
       "Simple physical landmarks including Home, School and Shop.",
     image: "/buildings.png",
 
-    // Lower left
     x: -360,
     y: 100,
 
-    start: 0.38,
-    end: 0.54,
+    delay: 0.79,
   },
 
   {
@@ -63,12 +55,10 @@ const kitItems = [
       "Programmable LED traffic lights for smart-city challenges.",
     image: "/traffic signal.png",
 
-    // Lower right
     x: 360,
     y: 100,
 
-    start: 0.48,
-    end: 0.64,
+    delay: 0.96,
   },
 
   {
@@ -77,12 +67,10 @@ const kitItems = [
       "Step-by-step activities that take learners from coding basics to real ManoCity missions.",
     image: "/guide.png",
 
-    // Bottom centre
     x: 0,
-    y: 300,
+    y: 220,
 
-    start: 0.58,
-    end: 0.74,
+    delay: 1.13,
   },
 ];
 
@@ -91,122 +79,92 @@ const kitItems = [
    ========================================================= */
 
 export default function ManoCityKit() {
-  const sectionRef = useRef<HTMLElement | null>(null);
+  const sectionRef =
+    useRef<HTMLElement | null>(null);
 
-  /* =====================================================
-     SCROLL PROGRESS
-     ===================================================== */
-
-  const { scrollYProgress } = useScroll({
-    target: sectionRef,
-    offset: ["start start", "end end"],
-  });
-
-  /*
-   * Smooth the raw scroll movement.
-   * This prevents cards from feeling jerky on trackpads.
-   */
-  const smoothProgress = useSpring(scrollYProgress, {
-    stiffness: 120,
-    damping: 24,
-    mass: 0.7,
-  });
-
-  /* =====================================================
-     CENTRAL KIT IMAGE ANIMATION
-     ===================================================== */
-
-  const kitScale = useTransform(
-    smoothProgress,
-    [0.02, 0.18],
-    [0.78, 1]
-  );
-
-  const kitOpacity = useTransform(
-    smoothProgress,
-    [0.02, 0.12],
-    [0, 1]
-  );
-
-  const kitY = useTransform(
-    smoothProgress,
-    [0.02, 0.18],
-    [60, 0]
-  );
-
-  /* =====================================================
-     HEADING ANIMATION
-     ===================================================== */
-
-  const headingOpacity = useTransform(
-    smoothProgress,
-    [0, 0.08, 0.22],
-    [1, 1, 0.35]
-  );
-
-  const headingY = useTransform(
-    smoothProgress,
-    [0, 0.2],
-    [0, -25]
+  const isInView = useInView(
+    sectionRef,
+    {
+      once: true,
+      amount: 0.18,
+    }
   );
 
   return (
     <section
       ref={sectionRef}
       id="manocity-kit"
-      className="relative h-[500vh] bg-white"
+      className="
+        relative
+        min-h-screen
+        overflow-hidden
+        bg-white
+        px-6
+        py-24
+        md:px-12
+        md:py-28
+      "
     >
-      {/* ===================================================
-          STICKY STAGE
-          =================================================== */}
+      {/* =====================================================
+          BACKGROUND
+          ===================================================== */}
 
       <div
         className="
-          sticky
-          top-0
-          h-screen
-          overflow-hidden
-          bg-white
+          pointer-events-none
+          absolute
+          left-1/2
+          top-[58%]
+          h-[780px]
+          w-[780px]
+          -translate-x-1/2
+          -translate-y-1/2
+          rounded-full
+          bg-[#168BE8]/[0.025]
+          blur-[130px]
+        "
+      />
+
+      <div
+        className="
+          relative
+          mx-auto
+          flex
+          min-h-[900px]
+          max-w-7xl
+          flex-col
+          items-center
         "
       >
-        {/* =================================================
-            BACKGROUND GLOW
-            ================================================= */}
-
-        <div
-          className="
-            pointer-events-none
-            absolute
-            left-1/2
-            top-[52%]
-            h-[900px]
-            w-[900px]
-            -translate-x-1/2
-            -translate-y-1/2
-            rounded-full
-            bg-[#168BE8]/5
-            blur-[140px]
-          "
-        />
-
-        {/* =================================================
+        {/* =====================================================
             HEADING
-            ================================================= */}
+            ===================================================== */}
 
         <motion.div
-          style={{
-            opacity: headingOpacity,
-            y: headingY,
+          initial={{
+            opacity: 0,
+            y: 24,
+          }}
+          animate={
+            isInView
+              ? {
+                  opacity: 1,
+                  y: 0,
+                }
+              : {
+                  opacity: 0,
+                  y: 24,
+                }
+          }
+          transition={{
+            duration: 0.7,
+            ease: [0.22, 1, 0.36, 1],
           }}
           className="
-            absolute
-            left-1/2
-            top-[7%]
+            relative
             z-40
-            w-full
+            mx-auto
             max-w-3xl
-            -translate-x-1/2
-            px-6
             text-center
           "
         >
@@ -250,68 +208,64 @@ export default function ManoCityKit() {
               text-[#49647E]
             "
           >
-            Build ManoBot, place it on the city, write real code and
-            complete physical missions.
+            Build ManoBot, place it on the city,
+            write real code and complete physical
+            missions.
           </p>
         </motion.div>
 
-        {/* =================================================
+        {/* =====================================================
             KIT STAGE
-            ================================================= */}
+            ===================================================== */}
 
         <div
           className="
-            absolute
-            left-1/2
-            top-[58%]
-            h-[720px]
+            relative
+            mt-10
+            h-[650px]
             w-full
             max-w-6xl
-            -translate-x-1/2
-            -translate-y-1/2
           "
         >
-          {/* ===============================================
-              CENTRAL COMPLETE KIT IMAGE
-              =============================================== */}
+          {/* =================================================
+              CENTRAL KIT
+              ================================================= */}
 
           <motion.div
-            style={{
-              opacity: kitOpacity,
-              scale: kitScale,
-              y: kitY,
+            initial={{
+              opacity: 0,
+              scale: 0.72,
+              y: 50,
+            }}
+            animate={
+              isInView
+                ? {
+                    opacity: 1,
+                    scale: 1,
+                    y: 0,
+                  }
+                : {
+                    opacity: 0,
+                    scale: 0.72,
+                    y: 50,
+                  }
+            }
+            transition={{
+              duration: 0.9,
+              delay: 0.15,
+              ease: [0.22, 1, 0.36, 1],
             }}
             className="
               absolute
               left-1/2
-              top-1/2
+              top-[44%]
               z-10
-              w-[600px]
+              w-[520px]
               -translate-x-1/2
               -translate-y-1/2
+              md:w-[600px]
             "
           >
-            {/* SOFT HALO */}
-
-            <div
-              className="
-                pointer-events-none
-                absolute
-                left-1/2
-                top-1/2
-                -z-10
-                h-[500px]
-                w-[600px]
-                -translate-x-1/2
-                -translate-y-1/2
-                rounded-full
-                bg-[#EAF7FF]/70
-                blur-[80px]
-              "
-            />
-
-            {/* COMPLETE MANOCITY KIT */}
-
             <Image
               src="/manocity%20kit%20image.png"
               alt="Complete ManoCity educational robotics kit"
@@ -322,37 +276,96 @@ export default function ManoCityKit() {
               className="
                 w-full
                 object-contain
-                drop-shadow-[0_35px_55px_rgba(11,31,58,0.15)]
+                drop-shadow-[0_30px_45px_rgba(11,31,58,0.12)]
               "
             />
           </motion.div>
 
-          {/* ===============================================
-              SCROLL-TRIGGERED PRODUCT CARDS
-              =============================================== */}
+          {/* =================================================
+              PRODUCT CARDS
+              ================================================= */}
 
           {kitItems.map((item) => (
-            <ScrollKitCard
+            <KitCard
               key={item.title}
               item={item}
-              progress={smoothProgress}
+              isInView={isInView}
             />
           ))}
         </div>
 
-        {/* =================================================
-            BOTTOM INDICATOR
-            ================================================= */}
+        {/* =====================================================
+            SHOP CTA
+            ===================================================== */}
 
-        <div
+        <motion.div
+          initial={{
+            opacity: 0,
+            y: 18,
+          }}
+          animate={
+            isInView
+              ? {
+                  opacity: 1,
+                  y: 0,
+                }
+              : {
+                  opacity: 0,
+                  y: 18,
+                }
+          }
+          transition={{
+            duration: 0.65,
+            delay: 1.5,
+          }}
           className="
-            absolute
-            bottom-7
-            left-1/2
+            relative
             z-50
-            -translate-x-1/2
+            -mt-1
+            flex
+            flex-col
+            items-center
+            gap-4
           "
         >
+          {/* SHOP BUTTON */}
+
+          <Link
+            href="/shop"
+            className="
+              inline-flex
+              items-center
+              gap-3
+              rounded-full
+              bg-[#0B1F3A]
+              px-8
+              py-4
+              text-sm
+              font-bold
+              text-white
+              shadow-[0_14px_30px_rgba(11,31,58,0.20)]
+              transition
+              duration-300
+              hover:-translate-y-1
+              hover:bg-[#168BE8]
+              hover:shadow-[0_18px_35px_rgba(22,139,232,0.25)]
+            "
+          >
+            Shop the ManoCity Kit
+
+            <span
+              className="
+                transition-transform
+                duration-300
+                group-hover:translate-x-1
+              "
+            >
+              →
+            </span>
+          </Link>
+
+          {/* SMALL JOURNEY LABEL */}
+
           <div
             className="
               rounded-full
@@ -372,19 +385,19 @@ export default function ManoCityKit() {
           >
             Build • Code • Explore
           </div>
-        </div>
+        </motion.div>
       </div>
     </section>
   );
 }
 
 /* =========================================================
-   SCROLL-TRIGGERED CARD
+   KIT CARD
    ========================================================= */
 
-function ScrollKitCard({
+function KitCard({
   item,
-  progress,
+  isInView,
 }: {
   item: {
     title: string;
@@ -392,81 +405,53 @@ function ScrollKitCard({
     image: string;
     x: number;
     y: number;
-    start: number;
-    end: number;
+    delay: number;
   };
 
-  progress: MotionValue<number>;
+  isInView: boolean;
 }) {
-  /* =====================================================
-     POSITION
-
-     Every card starts from the centre of the kit.
-     As the user scrolls it moves outward.
-     ===================================================== */
-
-  const x = useTransform(
-    progress,
-    [item.start, item.end],
-    [0, item.x]
-  );
-
-  const y = useTransform(
-    progress,
-    [item.start, item.end],
-    [0, item.y]
-  );
-
-  /* =====================================================
-     SCALE
-     ===================================================== */
-
-  const scale = useTransform(
-    progress,
-    [item.start, item.end],
-    [0.72, 1]
-  );
-
-  /* =====================================================
-     OPACITY
-     ===================================================== */
-
-  const opacity = useTransform(
-    progress,
-    [
-      item.start,
-      item.start + (item.end - item.start) * 0.35,
-      item.end,
-    ],
-    [0, 1, 1]
-  );
-
-  /* =====================================================
-     SMALL ROTATION DURING REVEAL
-     ===================================================== */
-
-  const rotate = useTransform(
-    progress,
-    [item.start, item.end],
-    [-5, 0]
-  );
-
   return (
     <motion.div
-      style={{
-        x,
-        y,
-        scale,
-        opacity,
-        rotate,
+      initial={{
+        x: 0,
+        y: 0,
+        scale: 0.7,
+        opacity: 0,
+        rotate: -5,
+      }}
+      animate={
+        isInView
+          ? {
+              x: item.x,
+              y: item.y,
+              scale: 1,
+              opacity: 1,
+              rotate: 0,
+            }
+          : {
+              x: 0,
+              y: 0,
+              scale: 0.7,
+              opacity: 0,
+              rotate: -5,
+            }
+      }
+      transition={{
+        duration: 0.85,
+        delay: item.delay,
+        ease: [0.22, 1, 0.36, 1],
       }}
       whileHover={{
-        scale: 1.04,
+        scale: 1.045,
+        y: item.y - 6,
+        transition: {
+          duration: 0.25,
+        },
       }}
       className="
         absolute
         left-1/2
-        top-1/2
+        top-[44%]
         z-20
         w-[220px]
         -translate-x-1/2
@@ -480,9 +465,9 @@ function ScrollKitCard({
         backdrop-blur-md
       "
     >
-      {/* ===============================================
-          CARD IMAGE
-          =============================================== */}
+      {/* =================================================
+          IMAGE
+          ================================================= */}
 
       <div
         className="
@@ -509,9 +494,7 @@ function ScrollKitCard({
         />
       </div>
 
-      {/* ===============================================
-          CARD TITLE
-          =============================================== */}
+      {/* TITLE */}
 
       <h3
         className="
@@ -524,9 +507,7 @@ function ScrollKitCard({
         {item.title}
       </h3>
 
-      {/* ===============================================
-          CARD DESCRIPTION
-          =============================================== */}
+      {/* DESCRIPTION */}
 
       <p
         className="

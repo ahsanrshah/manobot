@@ -1,29 +1,19 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import {
-  AnimatePresence,
-  motion,
-  useScroll,
-  useMotionValueEvent,
-  useSpring,
-} from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 
 /* =====================================================
-   FRAME SEQUENCE CONFIG
+   CONFIGURATION
    ===================================================== */
 
-const FRAME_COUNT = 150;
-const FRAME_ASPECT_RATIO = 1920 / 1080;
+const VIDEO_SRC = "/explore manocity.mp4";
 
-const FRAME_PATH = (index: number) =>
-  `/route-frames/frame_${String(index + 1).padStart(4, "0")}.jpg`;
-
-const END_BUFFER = 0.96;
-
-/* =====================================================
-   TEXT STAGES
-   ===================================================== */
+/*
+ * 1.0 = normal speed
+ * 1.8 = 80% faster
+ */
+const VIDEO_SPEED = 2;
 
 type StoryStage =
   | "intro"
@@ -32,450 +22,417 @@ type StoryStage =
   | "arrival";
 
 export default function ExploreManoCity() {
-  const sectionRef = useRef<HTMLElement | null>(null);
-  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
 
-  const imagesRef = useRef<HTMLImageElement[]>([]);
-  const currentFrameRef = useRef(-1);
-  const targetProgressRef = useRef(0);
-  const rafId = useRef<number | null>(null);
+  const junctionTriggeredRef = useRef(false);
 
-  const loadedFlagsRef = useRef<boolean[]>(
-    new Array(FRAME_COUNT).fill(false)
-  );
+  const [started, setStarted] = useState(false);
+  const [playing, setPlaying] = useState(false);
+  const [completed, setCompleted] = useState(false);
 
-  const [loaded, setLoaded] = useState(false);
-  const [loadProgress, setLoadProgress] = useState(0);
-
-  /*
-   * Only ONE narrative message exists at a time.
-   */
   const [storyStage, setStoryStage] =
     useState<StoryStage>("intro");
 
-  const { scrollYProgress } = useScroll({
-    target: sectionRef,
-    offset: ["start start", "end end"],
-  });
-
-  /*
-   * Smooth both video/frame movement and narrative timing.
-   */
-  const smoothProgress = useSpring(scrollYProgress, {
-    stiffness: 260,
-    damping: 32,
-    mass: 0.4,
-  });
-
-  useMotionValueEvent(
-    smoothProgress,
-    "change",
-    (progress) => {
-      targetProgressRef.current = progress;
-
-      /* ===============================================
-         STORY STAGE CONTROL
-
-         Only one message can be active.
-         =============================================== */
-
-      if (progress < 0.25) {
-        setStoryStage("intro");
-      } else if (progress < 0.55) {
-        setStoryStage("junction");
-      } else if (progress < 0.78) {
-        setStoryStage("driving");
-      } else {
-        setStoryStage("arrival");
-      }
-    }
-  );
-
   /* =====================================================
-     FRAME LOADING
+     INITIALISE VIDEO
      ===================================================== */
 
   useEffect(() => {
-    let cancelled = false;
-    let loadedCount = 0;
+    const video = videoRef.current;
 
-    const images: HTMLImageElement[] =
-      new Array(FRAME_COUNT);
+    if (!video) return;
 
-    const loadFrame = (i: number) => {
-      const img = new Image();
+    video.pause();
+    video.currentTime = 0;
+    video.muted = true;
 
-      img.src = FRAME_PATH(i);
-
-      img.onload = () => {
-        if (cancelled) return;
-
-        loadedFlagsRef.current[i] = true;
-        loadedCount++;
-
-        setLoadProgress(
-          loadedCount / FRAME_COUNT
-        );
-
-        if (i === 0) {
-          setLoaded(true);
-        }
-      };
-
-      images[i] = img;
-    };
-
-    /*
-     * First frame immediately.
-     */
-    loadFrame(0);
-
-    /*
-     * Remaining frames preload.
-     */
-    for (let i = 1; i < FRAME_COUNT; i++) {
-      loadFrame(i);
-    }
-
-    imagesRef.current = images;
-
-    return () => {
-      cancelled = true;
-    };
+    video.playbackRate = VIDEO_SPEED;
+    video.defaultPlaybackRate = VIDEO_SPEED;
   }, []);
 
   /* =====================================================
-     FIND NEAREST LOADED FRAME
+     PLAY VIDEO
      ===================================================== */
 
-  const nearestLoadedFrame = (
-    index: number
-  ) => {
-    for (let i = index; i >= 0; i--) {
-      if (loadedFlagsRef.current[i]) {
-        return i;
-      }
-    }
+  const playVideo = async () => {
+    const video = videoRef.current;
 
-    return 0;
+    if (!video) return;
+
+    try {
+      video.muted = true;
+      video.playbackRate = VIDEO_SPEED;
+
+      await video.play();
+
+      setPlaying(true);
+    } catch (error) {
+      console.error(
+        "Unable to play ManoCity video:",
+        error
+      );
+
+      setPlaying(false);
+    }
   };
 
   /* =====================================================
-     DRAW FRAME
+     START JOURNEY
      ===================================================== */
 
-  const drawFrame = (index: number) => {
-    const canvas = canvasRef.current;
-    const img = imagesRef.current[index];
+  const startJourney = async () => {
+    const video = videoRef.current;
 
-    if (!canvas || !img || !img.complete) {
+    if (!video) return;
+
+    video.pause();
+    video.currentTime = 0;
+    video.muted = true;
+    video.playbackRate = VIDEO_SPEED;
+
+    junctionTriggeredRef.current = false;
+
+    setStarted(true);
+    setPlaying(false);
+    setCompleted(false);
+    setStoryStage("intro");
+
+    await playVideo();
+  };
+
+  /* =====================================================
+     RUN CODE
+     ===================================================== */
+
+  const runCode = async () => {
+    setStoryStage("driving");
+
+    await playVideo();
+  };
+
+  /* =====================================================
+     PAUSE / CONTINUE
+     ===================================================== */
+
+  const togglePlayback = async () => {
+    const video = videoRef.current;
+
+    if (!video) return;
+
+    if (video.paused) {
+      await playVideo();
+    } else {
+      video.pause();
+      setPlaying(false);
+    }
+  };
+
+  /* =====================================================
+     RESET
+     ===================================================== */
+
+  const resetJourney = () => {
+    const video = videoRef.current;
+
+    if (!video) return;
+
+    video.pause();
+    video.currentTime = 0;
+    video.playbackRate = VIDEO_SPEED;
+
+    junctionTriggeredRef.current = false;
+
+    setStarted(false);
+    setPlaying(false);
+    setCompleted(false);
+    setStoryStage("intro");
+  };
+
+  /* =====================================================
+     VIDEO TIMING
+     ===================================================== */
+
+  const handleTimeUpdate = () => {
+    const video = videoRef.current;
+
+    if (!video || !video.duration) {
       return;
     }
 
-    const ctx = canvas.getContext("2d");
+    const progress =
+      video.currentTime / video.duration;
 
-    if (!ctx) return;
+    /* =================================================
+       INTRO
+       ================================================= */
 
-    const dpr =
-      window.devicePixelRatio || 1;
-
-    const width =
-      canvas.width / dpr;
-
-    const height =
-      canvas.height / dpr;
-
-    ctx.clearRect(
-      0,
-      0,
-      width,
-      height
-    );
-
-    /*
-     * object-cover style draw.
-     */
-    const imgRatio =
-      img.width / img.height;
-
-    const boxRatio =
-      width / height;
-
-    let drawWidth = width;
-    let drawHeight = height;
-
-    if (imgRatio > boxRatio) {
-      drawHeight = height;
-      drawWidth =
-        height * imgRatio;
-    } else {
-      drawWidth = width;
-      drawHeight =
-        width / imgRatio;
+    if (
+      progress < 0.35 &&
+      !junctionTriggeredRef.current
+    ) {
+      setStoryStage("intro");
+      return;
     }
 
-    const dx =
-      (width - drawWidth) / 2;
+    /* =================================================
+       JUNCTION
+       ================================================= */
 
-    const dy =
-      (height - drawHeight) / 2;
+    if (
+      progress >= 0.35 &&
+      !junctionTriggeredRef.current
+    ) {
+      junctionTriggeredRef.current = true;
 
-    ctx.drawImage(
-      img,
-      dx,
-      dy,
-      drawWidth,
-      drawHeight
-    );
+      video.pause();
+
+      setPlaying(false);
+      setStoryStage("junction");
+
+      return;
+    }
+
+    /* =================================================
+       HOLD AT JUNCTION
+       ================================================= */
+
+    if (storyStage === "junction") {
+      return;
+    }
+
+    /* =================================================
+       DRIVING
+       ================================================= */
+
+    if (progress < 0.86) {
+      setStoryStage("driving");
+      return;
+    }
+
+    /* =================================================
+       ARRIVAL
+       ================================================= */
+
+    setStoryStage("arrival");
   };
 
   /* =====================================================
-     CANVAS RESIZE
+     COMPLETE
      ===================================================== */
 
-  useEffect(() => {
-    const canvas =
-      canvasRef.current;
-
-    if (!canvas) return;
-
-    const resize = () => {
-      const dpr =
-        window.devicePixelRatio || 1;
-
-      const rect =
-        canvas.getBoundingClientRect();
-
-      if (
-        rect.width === 0 ||
-        rect.height === 0
-      ) {
-        return;
-      }
-
-      canvas.width =
-        rect.width * dpr;
-
-      canvas.height =
-        rect.height * dpr;
-
-      const ctx =
-        canvas.getContext("2d");
-
-      ctx?.scale(dpr, dpr);
-
-      if (
-        currentFrameRef.current >= 0
-      ) {
-        drawFrame(
-          currentFrameRef.current
-        );
-      }
-    };
-
-    const observer =
-      new ResizeObserver(resize);
-
-    observer.observe(canvas);
-
-    return () =>
-      observer.disconnect();
-
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [loaded]);
-
-  /* =====================================================
-     FRAME SCRUBBING LOOP
-     ===================================================== */
-
-  useEffect(() => {
-    if (!loaded) return;
-
-    const tick = () => {
-      const raw =
-        targetProgressRef.current;
-
-      const normalized =
-        Math.min(
-          raw / END_BUFFER,
-          1
-        );
-
-      const frameIndex =
-        Math.min(
-          FRAME_COUNT - 1,
-          Math.round(
-            normalized *
-              (FRAME_COUNT - 1)
-          )
-        );
-
-      const drawableIndex =
-        nearestLoadedFrame(
-          frameIndex
-        );
-
-      if (
-        drawableIndex !==
-        currentFrameRef.current
-      ) {
-        currentFrameRef.current =
-          drawableIndex;
-
-        drawFrame(
-          drawableIndex
-        );
-      }
-
-      rafId.current =
-        requestAnimationFrame(tick);
-    };
-
-    currentFrameRef.current = 0;
-
-    drawFrame(0);
-
-    rafId.current =
-      requestAnimationFrame(tick);
-
-    return () => {
-      if (rafId.current) {
-        cancelAnimationFrame(
-          rafId.current
-        );
-      }
-    };
-
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [loaded]);
+  const handleEnded = () => {
+    setPlaying(false);
+    setCompleted(true);
+    setStoryStage("arrival");
+  };
 
   return (
     <section
-      ref={sectionRef}
-      className="relative h-[500vh] bg-white"
+      id="explore"
+      className="
+        relative
+        min-h-screen
+        overflow-hidden
+        bg-white
+      "
     >
+      {/* =====================================================
+          VIDEO BACKGROUND
+          ===================================================== */}
+
+      <video
+        ref={videoRef}
+        src={VIDEO_SRC}
+        muted
+        playsInline
+        preload="auto"
+        controls={false}
+        disablePictureInPicture
+        onLoadedMetadata={(event) => {
+          const video = event.currentTarget;
+
+          video.muted = true;
+          video.playbackRate = VIDEO_SPEED;
+          video.defaultPlaybackRate = VIDEO_SPEED;
+
+          video.pause();
+          video.currentTime = 0;
+        }}
+        onPlay={() => {
+          const video = videoRef.current;
+
+          if (video) {
+            video.playbackRate = VIDEO_SPEED;
+          }
+
+          setPlaying(true);
+        }}
+        onPause={() => {
+          setPlaying(false);
+        }}
+        onTimeUpdate={handleTimeUpdate}
+        onEnded={handleEnded}
+        className="
+          absolute
+          inset-0
+          z-0
+          h-full
+          w-full
+          object-cover
+          object-center
+        "
+      />
+
+      {/* =====================================================
+          LEFT READABILITY GRADIENT
+          ===================================================== */}
+
       <div
         className="
-          sticky
-          top-0
-          h-screen
-          overflow-hidden
-          bg-white
+          pointer-events-none
+          absolute
+          inset-0
+          z-10
+          bg-gradient-to-r
+          from-white
+          via-white/90
+          via-[32%]
+          to-transparent
+          to-[68%]
         "
-      >
+      />
 
-        {/* ===============================================
-            MANOCITY ANIMATION
-            =============================================== */}
+      <div
+        className="
+          pointer-events-none
+          absolute
+          inset-0
+          z-10
+          bg-white/5
+        "
+      />
 
-        <canvas
-          ref={canvasRef}
-          className="
-            absolute
-            inset-0
-            h-full
-            w-full
-          "
-          style={{
-            aspectRatio:
-              `${FRAME_ASPECT_RATIO}`,
-          }}
-        />
+      {/* =====================================================
+          LARGE START BUTTON
+          ===================================================== */}
 
-        {/* ===============================================
-            LOADING STATUS
-            =============================================== */}
-
-        {loadProgress < 1 && (
-          <div
+      <AnimatePresence>
+        {!started && (
+          <motion.button
+            type="button"
+            aria-label="Start ManoCity Journey"
+            onClick={startJourney}
+            initial={{
+              opacity: 0,
+              scale: 0.8,
+            }}
+            animate={{
+              opacity: 1,
+              scale: 1,
+            }}
+            exit={{
+              opacity: 0,
+              scale: 0.8,
+            }}
+            whileHover={{
+              scale: 1.08,
+            }}
+            whileTap={{
+              scale: 0.94,
+            }}
+            transition={{
+              duration: 0.35,
+            }}
             className="
-              pointer-events-none
               absolute
-              bottom-4
-              right-4
-              z-20
-              rounded-full
-              bg-black/40
-              px-3
-              py-1
-              text-xs
-              font-medium
-              text-white
+              right-[18%]
+              top-1/2
+              z-30
+              hidden
+              -translate-y-1/2
+              flex-col
+              items-center
+              gap-3
+              md:flex
             "
           >
-            Loading{" "}
-            {Math.round(
-              loadProgress * 100
-            )}
-            %
-          </div>
+            <span
+              className="
+                flex
+                h-24
+                w-24
+                items-center
+                justify-center
+                rounded-full
+                bg-[#0B1F3A]
+                text-2xl
+                text-white
+                shadow-[0_15px_40px_rgba(11,31,58,0.30)]
+                transition
+                duration-300
+                hover:bg-[#168BE8]
+              "
+            >
+              <span className="ml-1">
+                ▶
+              </span>
+            </span>
+
+            <span
+              className="
+                rounded-full
+                bg-white/90
+                px-5
+                py-2
+                text-xs
+                font-extrabold
+                uppercase
+                tracking-[0.16em]
+                text-[#0B1F3A]
+                shadow-[0_8px_24px_rgba(11,31,58,0.12)]
+                backdrop-blur-md
+              "
+            >
+              Start Journey
+            </span>
+          </motion.button>
         )}
+      </AnimatePresence>
 
-        {/* ===============================================
-            READABILITY GRADIENT
-            =============================================== */}
+      {/* =====================================================
+          STORY CONTENT
+          ===================================================== */}
 
+      <div
+        className="
+          relative
+          z-20
+          mx-auto
+          flex
+          min-h-screen
+          max-w-7xl
+          items-center
+          px-6
+          py-24
+          md:px-12
+          md:py-32
+        "
+      >
         <div
           className="
-            pointer-events-none
-            absolute
-            inset-0
-            bg-gradient-to-r
-            from-white/95
-            via-white/50
-            to-transparent
-          "
-        />
-
-        {/* ===============================================
-            SINGLE STORY CONTAINER
-
-            This is the important change.
-            Only ONE text block can exist here.
-            =============================================== */}
-
-        <div
-          className="
-            absolute
-            left-12
-            top-1/2
-            z-40
-            w-[460px]
-            max-w-[90vw]
-            -translate-y-1/2
+            relative
+            min-h-[590px]
+            w-full
+            max-w-[520px]
           "
         >
-
-          <AnimatePresence
-            mode="wait"
-            initial={false}
-          >
-
-            {/* ==========================
+          <AnimatePresence mode="wait" initial={false}>
+            {/* =================================================
                 INTRO
-                ========================== */}
+                ================================================= */}
 
-            {storyStage ===
-              "intro" && (
-              <motion.div
-                key="intro"
-                initial={{
-                  opacity: 0,
-                  y: 35,
-                }}
-                animate={{
-                  opacity: 1,
-                  y: 0,
-                }}
-                exit={{
-                  opacity: 0,
-                  y: -25,
-                }}
-                transition={{
-                  duration: 0.32,
-                  ease: "easeOut",
-                }}
-              >
+            {storyStage === "intro" && (
+              <StoryContainer key="intro">
                 <p
                   className="
                     mb-4
@@ -491,21 +448,17 @@ export default function ExploreManoCity() {
 
                 <h2
                   className="
-                    text-5xl
+                    text-4xl
                     font-extrabold
                     leading-[1.05]
                     tracking-tight
                     text-[#0B1F3A]
+                    md:text-6xl
                   "
                 >
                   ManoBot is built.
 
-                  <span
-                    className="
-                      block
-                      text-[#168BE8]
-                    "
-                  >
+                  <span className="block text-[#168BE8]">
                     Now let&apos;s move.
                   </span>
                 </h2>
@@ -513,67 +466,94 @@ export default function ExploreManoCity() {
                 <p
                   className="
                     mt-6
+                    max-w-md
                     text-lg
                     leading-8
                     text-[#49647E]
                   "
                 >
-                  Mano needs to get
-                  from home to school.
-                  Scroll to guide
-                  ManoBot through the
-                  city.
+                  Mano needs to get from home to
+                  school. Start the journey and watch
+                  ManoBot travel through ManoCity.
                 </p>
 
-                <div
-                  className="
-                    mt-8
-                    flex
-                    items-center
-                    gap-3
-                    text-sm
-                    font-bold
-                    text-[#168BE8]
-                  "
-                >
-                  Scroll to drive
-
-                  <span
+                {!started && (
+                  <motion.button
+                    type="button"
+                    onClick={startJourney}
+                    whileHover={{
+                      y: -3,
+                    }}
+                    whileTap={{
+                      scale: 0.97,
+                    }}
                     className="
-                      text-xl
+                      mt-8
+                      inline-flex
+                      items-center
+                      gap-3
+                      rounded-full
+                      bg-[#0B1F3A]
+                      px-7
+                      py-4
+                      text-sm
+                      font-bold
+                      text-white
+                      shadow-[0_15px_35px_rgba(11,31,58,0.20)]
+                      transition
+                      duration-300
+                      hover:bg-[#168BE8]
                     "
                   >
-                    ↓
-                  </span>
-                </div>
-              </motion.div>
+                    Start the Journey →
+                  </motion.button>
+                )}
+
+                {started && (
+                  <div
+                    className="
+                      mt-8
+                      flex
+                      items-center
+                      gap-3
+                      text-sm
+                      font-semibold
+                      text-[#168BE8]
+                    "
+                  >
+                    <motion.span
+                      animate={
+                        playing
+                          ? {
+                              scale: [1, 1.35, 1],
+                              opacity: [1, 0.5, 1],
+                            }
+                          : {}
+                      }
+                      transition={{
+                        duration: 1,
+                        repeat: Infinity,
+                      }}
+                      className="
+                        h-2.5
+                        w-2.5
+                        rounded-full
+                        bg-[#168BE8]
+                      "
+                    />
+
+                    ManoBot is moving...
+                  </div>
+                )}
+              </StoryContainer>
             )}
 
-            {/* ==========================
+            {/* =================================================
                 JUNCTION
-                ========================== */}
+                ================================================= */}
 
-            {storyStage ===
-              "junction" && (
-              <motion.div
-                key="junction"
-                initial={{
-                  opacity: 0,
-                  y: 35,
-                }}
-                animate={{
-                  opacity: 1,
-                  y: 0,
-                }}
-                exit={{
-                  opacity: 0,
-                  y: -25,
-                }}
-                transition={{
-                  duration: 0.32,
-                  ease: "easeOut",
-                }}
-              >
+            {storyStage === "junction" && (
+              <StoryContainer key="junction">
                 <p
                   className="
                     mb-4
@@ -589,21 +569,17 @@ export default function ExploreManoCity() {
 
                 <h2
                   className="
-                    text-5xl
+                    text-4xl
                     font-extrabold
                     leading-[1.05]
                     tracking-tight
                     text-[#0B1F3A]
+                    md:text-6xl
                   "
                 >
                   Which way
 
-                  <span
-                    className="
-                      block
-                      text-[#168BE8]
-                    "
-                  >
+                  <span className="block text-[#168BE8]">
                     should Mano go?
                   </span>
                 </h2>
@@ -611,42 +587,141 @@ export default function ExploreManoCity() {
                 <p
                   className="
                     mt-6
+                    max-w-md
                     text-lg
                     leading-8
                     text-[#49647E]
                   "
                 >
-                  ManoBot has reached
-                  its first decision
-                  point.
+                  ManoBot has reached the
+                  junction. Your program decides
+                  what happens next.
                 </p>
-              </motion.div>
+
+                {/* CODE CARD */}
+
+                <div
+                  className="
+                    mt-7
+                    max-w-md
+                    overflow-hidden
+                    rounded-[22px]
+                    bg-[#07182A]
+                    p-5
+                    font-mono
+                    text-sm
+                    shadow-[0_16px_40px_rgba(7,24,42,0.18)]
+                  "
+                >
+                  <div className="mb-4 flex gap-1.5">
+                    <span className="h-2.5 w-2.5 rounded-full bg-[#FF6B6B]" />
+                    <span className="h-2.5 w-2.5 rounded-full bg-[#FFD166]" />
+                    <span className="h-2.5 w-2.5 rounded-full bg-[#65D6A6]" />
+                  </div>
+
+                  <p className="text-[#9AD8FF]">
+                    if{" "}
+                    <span className="text-white">
+                      junction
+                    </span>
+                    :
+                  </p>
+
+                  <p className="pl-6 text-white">
+                    go_straight()
+                  </p>
+                </div>
+
+                {/* RUN CODE BUTTON */}
+
+                <motion.button
+                  type="button"
+                  onClick={runCode}
+                  whileHover={{
+                    y: -3,
+                  }}
+                  whileTap={{
+                    scale: 0.97,
+                  }}
+                  className="
+                    mt-7
+                    inline-flex
+                    items-center
+                    gap-3
+                    rounded-full
+                    bg-[#168BE8]
+                    px-8
+                    py-4
+                    text-sm
+                    font-extrabold
+                    text-white
+                    shadow-[0_12px_30px_rgba(22,139,232,0.30)]
+                    transition
+                    duration-300
+                    hover:bg-[#0B1F3A]
+                  "
+                >
+                  Run the Code
+                  <span>▶</span>
+                </motion.button>
+
+                {/* WAITING MESSAGE — 2 SECOND DELAY */}
+
+                <motion.div
+                  initial={{
+                    opacity: 0,
+                    y: 6,
+                  }}
+                  animate={{
+                    opacity: 1,
+                    y: 0,
+                  }}
+                  transition={{
+                    delay: 2,
+                    duration: 0.5,
+                    ease: "easeOut",
+                  }}
+                  className="
+                    mt-5
+                    flex
+                    items-center
+                    gap-2
+                    text-xs
+                    font-semibold
+                    text-[#7C90A2]
+                  "
+                >
+                  <motion.span
+                    animate={{
+                      opacity: [1, 0.3, 1],
+                    }}
+                    transition={{
+                      delay: 2,
+                      duration: 1.2,
+                      repeat: Infinity,
+                    }}
+                    className="
+                      h-2
+                      w-2
+                      rounded-full
+                      bg-[#FF9D17]
+                    "
+                  />
+
+                  ManoBot is waiting for your
+                  instruction.
+                </motion.div>
+              </StoryContainer>
             )}
 
-            {/* ==========================
-                DRIVING / CODE DECISION
-                ========================== */}
+            {/* =================================================
+                DRIVING
+                ================================================= */}
 
-            {storyStage ===
-              "driving" && (
-              <motion.div
+            {storyStage === "driving" && (
+              <StoryContainer
                 key="driving"
-                initial={{
-                  opacity: 0,
-                  y: 35,
-                }}
-                animate={{
-                  opacity: 1,
-                  y: 0,
-                }}
-                exit={{
-                  opacity: 0,
-                  y: -25,
-                }}
-                transition={{
-                  duration: 0.32,
-                  ease: "easeOut",
-                }}
+                delay={0.4}
               >
                 <p
                   className="
@@ -658,70 +733,54 @@ export default function ExploreManoCity() {
                     text-[#168BE8]
                   "
                 >
-                  Your Code Decides
+                  Code Running
                 </p>
 
                 <h2
                   className="
-                    text-5xl
+                    text-4xl
                     font-extrabold
                     leading-[1.05]
                     tracking-tight
                     text-[#0B1F3A]
+                    md:text-6xl
                   "
                 >
-                  Tell ManoBot
+                  ManoBot follows
 
-                  <span
-                    className="
-                      block
-                      text-[#168BE8]
-                    "
-                  >
-                    where to go.
+                  <span className="block text-[#168BE8]">
+                    your instruction.
                   </span>
                 </h2>
 
                 <p
                   className="
                     mt-6
+                    max-w-md
                     text-lg
                     leading-8
                     text-[#49647E]
                   "
                 >
-                  ManoBot follows the
-                  instructions you
-                  program.
+                  The program is running.
+                  Watch ManoBot follow the route
+                  toward school.
                 </p>
-              </motion.div>
+
+                <JourneyControls
+                  playing={playing}
+                  onToggle={togglePlayback}
+                  onReset={resetJourney}
+                />
+              </StoryContainer>
             )}
 
-            {/* ==========================
+            {/* =================================================
                 ARRIVAL
-                ========================== */}
+                ================================================= */}
 
-            {storyStage ===
-              "arrival" && (
-              <motion.div
-                key="arrival"
-                initial={{
-                  opacity: 0,
-                  y: 35,
-                }}
-                animate={{
-                  opacity: 1,
-                  y: 0,
-                }}
-                exit={{
-                  opacity: 0,
-                  y: -25,
-                }}
-                transition={{
-                  duration: 0.32,
-                  ease: "easeOut",
-                }}
-              >
+            {storyStage === "arrival" && (
+              <StoryContainer key="arrival">
                 <p
                   className="
                     mb-4
@@ -732,26 +791,24 @@ export default function ExploreManoCity() {
                     text-[#168BE8]
                   "
                 >
-                  Mission Complete
+                  {completed
+                    ? "Mission Complete"
+                    : "Almost There"}
                 </p>
 
                 <h2
                   className="
-                    text-5xl
+                    text-4xl
                     font-extrabold
                     leading-[1.05]
                     tracking-tight
                     text-[#0B1F3A]
+                    md:text-6xl
                   "
                 >
                   Mano made it
 
-                  <span
-                    className="
-                      block
-                      text-[#168BE8]
-                    "
-                  >
+                  <span className="block text-[#168BE8]">
                     to school.
                   </span>
                 </h2>
@@ -759,77 +816,235 @@ export default function ExploreManoCity() {
                 <p
                   className="
                     mt-6
+                    max-w-md
                     text-lg
                     leading-8
                     text-[#49647E]
                   "
                 >
-                  One journey.
-                  One decision.
-                  Your code made it
-                  happen.
+                  One journey. One decision.
+                  Your code made it happen.
                 </p>
 
-                <button
-                  className="
-                    mt-8
-                    rounded-full
-                    bg-[#0B1F3A]
-                    px-7
-                    py-3.5
-                    text-sm
-                    font-bold
-                    text-white
-                    shadow-lg
-                    transition
-                    hover:bg-[#168BE8]
-                  "
-                >
-                  Explore the Next
-                  Mission →
-                </button>
-              </motion.div>
+                {completed ? (
+                  <div
+                    className="
+                      mt-8
+                      flex
+                      flex-wrap
+                      gap-4
+                    "
+                  >
+                    <motion.button
+                      type="button"
+                      onClick={startJourney}
+                      whileHover={{
+                        y: -2,
+                      }}
+                      whileTap={{
+                        scale: 0.97,
+                      }}
+                      className="
+                        rounded-full
+                        bg-[#0B1F3A]
+                        px-7
+                        py-4
+                        text-sm
+                        font-bold
+                        text-white
+                        transition
+                        duration-300
+                        hover:bg-[#168BE8]
+                      "
+                    >
+                      Drive Again ↻
+                    </motion.button>
+
+                    <button
+                      type="button"
+                      className="
+                        rounded-full
+                        border
+                        border-[#168BE8]/20
+                        bg-white/90
+                        px-7
+                        py-4
+                        text-sm
+                        font-bold
+                        text-[#168BE8]
+                        transition
+                        hover:border-[#168BE8]
+                      "
+                    >
+                      Next Mission →
+                    </button>
+                  </div>
+                ) : (
+                  <JourneyControls
+                    playing={playing}
+                    onToggle={togglePlayback}
+                    onReset={resetJourney}
+                  />
+                )}
+              </StoryContainer>
             )}
-
           </AnimatePresence>
-
         </div>
+      </div>
 
-        {/* ===============================================
-            BOTTOM STATUS
-            =============================================== */}
+      {/* =====================================================
+          BOTTOM LABEL
+          ===================================================== */}
 
+      <div
+        className="
+          absolute
+          bottom-7
+          left-1/2
+          z-40
+          -translate-x-1/2
+        "
+      >
         <div
           className="
-            absolute
-            bottom-7
-            left-1/2
-            z-50
-            -translate-x-1/2
+            rounded-full
+            border
+            border-[#168BE8]/10
+            bg-white/80
+            px-5
+            py-2
+            text-[10px]
+            font-bold
+            uppercase
+            tracking-[0.24em]
+            text-[#168BE8]
+            shadow-sm
+            backdrop-blur-md
           "
         >
-          <div
-            className="
-              rounded-full
-              border
-              border-[#168BE8]/15
-              bg-white/85
-              px-5
-              py-2
-              text-[10px]
-              font-bold
-              uppercase
-              tracking-[0.24em]
-              text-[#168BE8]
-              shadow-sm
-              backdrop-blur-md
-            "
-          >
-            Drive • Decide • Code • Explore
-          </div>
+          Drive • Decide • Code • Explore
         </div>
-
       </div>
     </section>
+  );
+}
+
+/* =====================================================
+   STORY CONTAINER
+   ===================================================== */
+
+function StoryContainer({
+  children,
+  delay = 0,
+}: {
+  children: React.ReactNode;
+  delay?: number;
+}) {
+  return (
+    <motion.div
+      initial={{
+        opacity: 0,
+        y: 15,
+      }}
+      animate={{
+        opacity: 1,
+        y: 0,
+      }}
+      exit={{
+        opacity: 0,
+        y: -10,
+      }}
+      transition={{
+        duration: 0.7,
+        delay,
+        ease: "easeInOut",
+      }}
+      className="
+        absolute
+        left-0
+        top-1/2
+        w-full
+        -translate-y-1/2
+      "
+    >
+      {children}
+    </motion.div>
+  );
+}
+
+/* =====================================================
+   NORMAL JOURNEY CONTROLS
+   ===================================================== */
+
+function JourneyControls({
+  playing,
+  onToggle,
+  onReset,
+}: {
+  playing: boolean;
+  onToggle: () => void;
+  onReset: () => void;
+}) {
+  return (
+    <div className="mt-8 flex flex-wrap gap-4">
+      <motion.button
+        type="button"
+        onClick={onToggle}
+        whileHover={{
+          y: -2,
+        }}
+        whileTap={{
+          scale: 0.97,
+        }}
+        className="
+          inline-flex
+          items-center
+          gap-3
+          rounded-full
+          bg-[#0B1F3A]
+          px-7
+          py-4
+          text-sm
+          font-bold
+          text-white
+          shadow-[0_10px_25px_rgba(11,31,58,0.15)]
+          transition
+          duration-300
+          hover:bg-[#168BE8]
+        "
+      >
+        {playing
+          ? "Pause Journey"
+          : "Continue Journey"}
+
+        <span>
+          {playing
+            ? "Ⅱ"
+            : "▶"}
+        </span>
+      </motion.button>
+
+      <button
+        type="button"
+        onClick={onReset}
+        className="
+          rounded-full
+          border
+          border-[#168BE8]/20
+          bg-white/90
+          px-6
+          py-4
+          text-sm
+          font-bold
+          text-[#49647E]
+          transition
+          duration-300
+          hover:border-[#168BE8]
+          hover:text-[#168BE8]
+        "
+      >
+        Reset
+      </button>
+    </div>
   );
 }
