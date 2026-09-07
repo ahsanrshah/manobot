@@ -316,7 +316,7 @@ export default function ShopPage() {
                     text-[#0B1F3A]
                   "
                 >
-                  £225
+                  £125
                 </span>
 
                 <span
@@ -1133,7 +1133,7 @@ export default function ShopPage() {
                         text-[#0B1F3A]
                       "
                     >
-                      £225
+                      £125
                     </span>
 
                     <span
