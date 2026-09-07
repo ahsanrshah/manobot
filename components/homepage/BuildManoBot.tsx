@@ -4,13 +4,142 @@ import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 
 const VIDEO_SRC = "/robot%20assembly%20video.mp4";
+const PLAYBACK_RATE = 3;
 
 export default function BuildManoBot() {
+  const sectionRef = useRef<HTMLElement | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
 
   const [started, setStarted] = useState(false);
   const [playing, setPlaying] = useState(false);
   const [completed, setCompleted] = useState(false);
+  const [inView, setInView] = useState(false);
+
+  /* =====================================================
+     RESET VIDEO TO START
+     ===================================================== */
+
+  const resetVideoToStart = () => {
+    const video = videoRef.current;
+
+    if (!video) return;
+
+    video.pause();
+
+    try {
+      video.currentTime = 0;
+    } catch {
+      // Metadata may not be loaded yet.
+    }
+
+    video.playbackRate = PLAYBACK_RATE;
+    video.defaultPlaybackRate = PLAYBACK_RATE;
+
+    setStarted(false);
+    setPlaying(false);
+    setCompleted(false);
+  };
+
+  /* =====================================================
+     START ASSEMBLY
+     ===================================================== */
+
+  const startAssembly = async () => {
+    const video = videoRef.current;
+
+    if (!video) return;
+
+    try {
+      video.pause();
+      video.currentTime = 0;
+
+      video.playbackRate = PLAYBACK_RATE;
+      video.defaultPlaybackRate = PLAYBACK_RATE;
+
+      setStarted(true);
+      setCompleted(false);
+
+      await video.play();
+
+      setPlaying(true);
+    } catch (error) {
+      console.error(
+        "Unable to autoplay ManoBot assembly:",
+        error
+      );
+
+      setPlaying(false);
+    }
+  };
+
+  /* =====================================================
+     VIEWPORT OBSERVER
+
+     Enter section:
+     - reset
+     - autoplay from beginning
+
+     Leave section:
+     - pause
+     - return to beginning
+     ===================================================== */
+
+  useEffect(() => {
+    const section = sectionRef.current;
+
+    if (!section) return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        setInView(entry.isIntersecting);
+      },
+      {
+        /*
+         * Start once roughly 35% of the section
+         * is visible.
+         */
+        threshold: 0.35,
+      }
+    );
+
+    observer.observe(section);
+
+    return () => {
+      observer.disconnect();
+    };
+  }, []);
+
+  /* =====================================================
+     RESPOND TO VIEWPORT CHANGE
+     ===================================================== */
+
+  useEffect(() => {
+    const video = videoRef.current;
+
+    if (!video) return;
+
+    if (inView) {
+      /*
+       * Small delay prevents rapid play/reset behaviour
+       * when the observer sits right on the threshold.
+       */
+
+      const timer = window.setTimeout(() => {
+        startAssembly();
+      }, 150);
+
+      return () => {
+        window.clearTimeout(timer);
+      };
+    }
+
+    /*
+     * Section has left the viewport.
+     * Return everything to its original state.
+     */
+
+    resetVideoToStart();
+  }, [inView]);
 
   /* =====================================================
      INITIALISE VIDEO
@@ -22,42 +151,16 @@ export default function BuildManoBot() {
     if (!video) return;
 
     video.pause();
-    video.currentTime = 0;
 
-    // Play assembly at 3x speed
-    video.playbackRate = 3;
-    video.defaultPlaybackRate = 3;
-  }, []);
-
-  /* =====================================================
-     START BUILD
-     ===================================================== */
-
-  const startBuild = async () => {
-    const video = videoRef.current;
-
-    if (!video) return;
+    video.playbackRate = PLAYBACK_RATE;
+    video.defaultPlaybackRate = PLAYBACK_RATE;
 
     try {
-      video.pause();
       video.currentTime = 0;
-
-      // Ensure every build starts at 3x speed
-      video.playbackRate = 3;
-
-      setStarted(true);
-      setCompleted(false);
-
-      await video.play();
-
-      setPlaying(true);
-    } catch (error) {
-      console.error(
-        "Unable to play ManoBot assembly video:",
-        error
-      );
+    } catch {
+      // Video metadata may not be ready.
     }
-  };
+  }, []);
 
   /* =====================================================
      PAUSE / CONTINUE
@@ -70,7 +173,19 @@ export default function BuildManoBot() {
 
     if (video.paused) {
       try {
-        video.playbackRate = 3;
+        /*
+         * If the video had already finished,
+         * start again from the beginning.
+         */
+
+        if (video.ended || completed) {
+          video.currentTime = 0;
+
+          setCompleted(false);
+          setStarted(true);
+        }
+
+        video.playbackRate = PLAYBACK_RATE;
 
         await video.play();
 
@@ -88,21 +203,49 @@ export default function BuildManoBot() {
   };
 
   /* =====================================================
-     RESET
+     MANUAL RESET
+
+     If still in view, reset and immediately
+     start the assembly again.
      ===================================================== */
 
-  const resetBuild = () => {
+  const resetBuild = async () => {
     const video = videoRef.current;
 
     if (!video) return;
 
     video.pause();
     video.currentTime = 0;
-    video.playbackRate = 3;
+
+    video.playbackRate = PLAYBACK_RATE;
+    video.defaultPlaybackRate = PLAYBACK_RATE;
 
     setStarted(false);
     setPlaying(false);
     setCompleted(false);
+
+    if (inView) {
+      try {
+        setStarted(true);
+
+        await video.play();
+
+        setPlaying(true);
+      } catch (error) {
+        console.error(
+          "Unable to restart ManoBot assembly:",
+          error
+        );
+      }
+    }
+  };
+
+  /* =====================================================
+     BUILD AGAIN
+     ===================================================== */
+
+  const buildAgain = async () => {
+    await startAssembly();
   };
 
   /* =====================================================
@@ -112,10 +255,12 @@ export default function BuildManoBot() {
   const handleEnded = () => {
     setPlaying(false);
     setCompleted(true);
+    setStarted(true);
   };
 
   return (
     <section
+      ref={sectionRef}
       id="build"
       className="
         relative
@@ -185,10 +330,10 @@ export default function BuildManoBot() {
               md:text-6xl
             "
           >
-            Ready to build
+            Watch ManoBot
 
             <span className="block text-[#168BE8]">
-              your ManoBot?
+              come to life.
             </span>
           </h2>
 
@@ -201,18 +346,19 @@ export default function BuildManoBot() {
               text-[#49647E]
             "
           >
-            See how ManoBot comes together piece by piece.
-            Start the build and watch your robot take shape.
+            See how ManoBot comes together piece by piece
+            as the controller, sensors, motors and robot
+            body become one working machine.
           </p>
 
           {/* =================================================
               STATUS
               ================================================= */}
 
-          <div className="mt-8 min-h-[34px]">
+          <div className="mt-8 min-h-[42px]">
             <AnimatePresence mode="wait">
 
-              {/* READY */}
+              {/* WAITING */}
 
               {!started && (
                 <motion.div
@@ -248,7 +394,7 @@ export default function BuildManoBot() {
                     "
                   />
 
-                  Parts ready for assembly
+                  ManoBot parts ready for assembly
                 </motion.div>
               )}
 
@@ -300,8 +446,8 @@ export default function BuildManoBot() {
                   />
 
                   {playing
-                    ? "Building your ManoBot..."
-                    : "Build paused"}
+                    ? "Assembling your ManoBot..."
+                    : "Assembly paused"}
                 </motion.div>
               )}
 
@@ -336,6 +482,7 @@ export default function BuildManoBot() {
                   ManoBot Ready!
                 </motion.div>
               )}
+
             </AnimatePresence>
           </div>
 
@@ -345,46 +492,11 @@ export default function BuildManoBot() {
 
           <div className="mt-8 flex flex-wrap gap-4">
 
-            {/* START */}
-
-            {!started && (
-              <motion.button
-                whileHover={{
-                  y: -3,
-                }}
-                whileTap={{
-                  scale: 0.97,
-                }}
-                onClick={startBuild}
-                className="
-                  inline-flex
-                  items-center
-                  gap-3
-                  rounded-full
-                  bg-[#0B1F3A]
-                  px-7
-                  py-4
-                  text-sm
-                  font-bold
-                  text-white
-                  shadow-[0_15px_35px_rgba(11,31,58,0.20)]
-                  transition
-                  duration-300
-                  hover:bg-[#168BE8]
-                "
-              >
-                Build My ManoBot
-
-                <span>
-                  →
-                </span>
-              </motion.button>
-            )}
-
             {/* PAUSE / CONTINUE */}
 
             {started && !completed && (
               <motion.button
+                type="button"
                 whileHover={{
                   y: -2,
                 }}
@@ -410,11 +522,11 @@ export default function BuildManoBot() {
                 "
               >
                 {playing
-                  ? "Pause Build"
-                  : "Continue Build"}
+                  ? "Pause Assembly"
+                  : "Continue Assembly"}
 
                 <span>
-                  {playing ? "Ⅱ" : "→"}
+                  {playing ? "Ⅱ" : "▶"}
                 </span>
               </motion.button>
             )}
@@ -423,13 +535,14 @@ export default function BuildManoBot() {
 
             {completed && (
               <motion.button
+                type="button"
                 whileHover={{
                   y: -2,
                 }}
                 whileTap={{
                   scale: 0.97,
                 }}
-                onClick={startBuild}
+                onClick={buildAgain}
                 className="
                   inline-flex
                   items-center
@@ -449,9 +562,7 @@ export default function BuildManoBot() {
               >
                 Build Again
 
-                <span>
-                  ↻
-                </span>
+                <span>↻</span>
               </motion.button>
             )}
 
@@ -459,6 +570,7 @@ export default function BuildManoBot() {
 
             {started && !completed && (
               <button
+                type="button"
                 onClick={resetBuild}
                 className="
                   rounded-full
@@ -476,13 +588,13 @@ export default function BuildManoBot() {
                   hover:text-[#168BE8]
                 "
               >
-                Reset
+                Restart
               </button>
             )}
 
           </div>
 
-          {/* SMALL INTERACTION MESSAGE */}
+          {/* SMALL MESSAGE */}
 
           {!started && (
             <p
@@ -493,7 +605,8 @@ export default function BuildManoBot() {
                 text-[#8A9BAB]
               "
             >
-              Press the button and watch ManoBot come to life.
+              Assembly begins automatically when this
+              section enters your view.
             </p>
           )}
 
@@ -528,8 +641,6 @@ export default function BuildManoBot() {
             justify-center
           "
         >
-          {/* VIDEO DIRECTLY ON WHITE PAGE */}
-
           <div
             className="
               relative
@@ -546,26 +657,47 @@ export default function BuildManoBot() {
               preload="auto"
               disablePictureInPicture
               controls={false}
+
               onLoadedMetadata={(event) => {
                 const video = event.currentTarget;
 
-                video.playbackRate = 3;
-                video.defaultPlaybackRate = 3;
+                video.playbackRate =
+                  PLAYBACK_RATE;
 
-                video.pause();
-                video.currentTime = 0;
+                video.defaultPlaybackRate =
+                  PLAYBACK_RATE;
+
+                /*
+                 * If the section is not currently
+                 * visible, ensure the first frame
+                 * remains at the beginning.
+                 */
+
+                if (!inView) {
+                  video.pause();
+                  video.currentTime = 0;
+                }
               }}
+
               onPlay={() => {
-                const video = videoRef.current;
+                const video =
+                  videoRef.current;
 
                 if (video) {
-                  video.playbackRate = 3;
+                  video.playbackRate =
+                    PLAYBACK_RATE;
                 }
 
+                setStarted(true);
                 setPlaying(true);
               }}
-              onPause={() => setPlaying(false)}
+
+              onPause={() => {
+                setPlaying(false);
+              }}
+
               onEnded={handleEnded}
+
               className="
                 block
                 h-auto
@@ -589,6 +721,10 @@ export default function BuildManoBot() {
                   animate={{
                     opacity: 1,
                     y: 0,
+                  }}
+                  exit={{
+                    opacity: 0,
+                    y: 8,
                   }}
                   transition={{
                     duration: 0.4,
