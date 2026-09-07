@@ -23,6 +23,14 @@ export default function RootLayout({
 
         {/* ALL PAGES */}
         {children}
+        <head>
+  <link
+    rel="preload"
+    href="/robot%20assembly%20video.mp4"
+    as="video"
+    type="video/mp4"
+  />
+</head>
 
       </body>
     </html>
